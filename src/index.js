@@ -5,13 +5,28 @@ const File = require('./file');
 const Server = require('./server');
 
 const DEFAULT_N = 2;
+const DEFAULT_M = 2;
+const DEFAULT_T = 100;
 
 (async () => {
   try {
     fs.mkdirSync(path.join(__dirname, '..', 'output'), { recursive : true });
 
     // N回連続でタイムアウトであればサーバの故障とみなす
-    const n = process.argv[2] || DEFAULT_N;
+    const n = Number(process.argv[2]) || DEFAULT_N;
+    if (n < 0) {
+      throw new Error('unexpected value : n');
+    }
+
+    // 直近m回の平均応答時間がtミリ秒を超える場合に過負荷状態とみなす
+    const m = Number(process.argv[3]) || DEFAULT_M;
+    const t = Number(process.argv[4]) || DEFAULT_T;
+    if (m < 0) {
+      throw new Error('unexpected value : m');
+    }
+    if (t < 0) {
+      throw new Error('unexpected value : t');
+    }
 
     for (let i = 1; i <= 5; i++) {
 
@@ -22,9 +37,23 @@ const DEFAULT_N = 2;
       const servers = getServers(inputData);
       const result = [];
       for (let server in servers) {
+        if (n > servers[server].logs.length) {
+          throw new Error('unexpected value : n');
+        }
         const periods = servers[server].getFaultPeriods(n);
         for (let period of periods) {
           result.push({ server: servers[server].address, status: 'fault', period: period});
+        }
+      }
+
+      // サーバ毎に過負荷期間を取得
+      for (let server in servers) {
+        if (m > servers[server].logs.length) {
+          throw new Error('unexpected value : m');
+        }
+        const periods = servers[server].getOverloadPeriods(m, t);
+        for (let period of periods) {
+          result.push({ server: servers[server].address, status: 'overload', period: period});
         }
       }
 
