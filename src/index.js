@@ -4,9 +4,15 @@ const path = require('path');
 const File = require('./file');
 const Server = require('./server');
 
+const DEFAULT_N = 2;
+
 (async () => {
   try {
     fs.mkdirSync(path.join(__dirname, '..', 'output'), { recursive : true });
+
+    // N回連続でタイムアウトであればサーバの故障とみなす
+    const n = process.argv[2] || DEFAULT_N;
+
     for (let i = 1; i <= 5; i++) {
 
       // ファイル読み込み
@@ -16,7 +22,7 @@ const Server = require('./server');
       const servers = getServers(inputData);
       const result = [];
       for (let server in servers) {
-        const periods = servers[server].getFaultPeriods();
+        const periods = servers[server].getFaultPeriods(n);
         for (let period of periods) {
           result.push({ server: servers[server].address, status: 'fault', period: period});
         }

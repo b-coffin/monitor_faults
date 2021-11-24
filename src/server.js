@@ -22,22 +22,28 @@ class Server {
 
   /**
    * 故障期間を取得
+   * @param {number} n n回連続でタイムアウトであればサーバの故障とみなす
    * @returns {array}
    */
-  getFaultPeriods() {
+  getFaultPeriods(n) {
     let start = null;
     let end = null;
+    let count = 0;
     const periods = [];
     for (let log of this.logs) {
       if (log.response === '-') {
+        count++;
         if (start === null) {
           start = log.date;
         }
       } else {
         if (start !== null) {
-          end = log.date;
-          periods.push(`${start} ~ ${end}`);
+          if (count >= n) {
+            end = log.date;
+            periods.push(`${start} ~ ${end}`);
+          }
           start = null;
+          count = 0;
         }
       }
     }
