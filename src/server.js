@@ -50,6 +50,39 @@ class Server {
     return periods;
   }
 
+  /**
+   * 直近m回の平均応答時間がtを超えた場合（サーバが過負荷状態になっている場合）の期間を取得
+   * @param {number} m 直近何回の平均応答時間を参照するか
+   * @param {number} t 過負荷状態とする平均応答時間の閾値
+   * @returns {array}
+   */
+  getOverloadPeriods(m, t) {
+    let start = null;
+    let end = null;
+    const periods = [];
+    for (let i = m - 1; i < this.logs.length; i++) {
+      let sum = 0;
+      for (let j = i; j > i - m; j--) {
+        if (this.logs[j].response !== '-') {
+          sum += this.logs[j].response;
+        }
+      }
+      const average = sum/m;
+      if (average > t) {
+        if (start === null) {
+          start = this.logs[i].date;
+        }
+      } else {
+        if (start !== null) {
+          end = this.logs[i].date;
+          periods.push(`${start} ~ ${end}`);
+          start = null;
+        }
+      }
+    }
+    return periods;
+  }
+
 }
 
 module.exports = Server
