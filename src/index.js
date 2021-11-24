@@ -3,6 +3,7 @@ const path = require('path');
 
 const File = require('./file');
 const Server = require('./server');
+const Network = require('./network');
 
 const DEFAULT_N = 2;
 const DEFAULT_M = 2;
@@ -42,7 +43,7 @@ const DEFAULT_T = 100;
         }
         const periods = servers[server].getFaultPeriods(n);
         for (let period of periods) {
-          result.push({ server: servers[server].address, status: 'fault', period: period});
+          result.push({ network: servers[server].network, server: servers[server].address, status: 'fault', period: period});
         }
       }
 
@@ -53,7 +54,16 @@ const DEFAULT_T = 100;
         }
         const periods = servers[server].getOverloadPeriods(m, t);
         for (let period of periods) {
-          result.push({ server: servers[server].address, status: 'overload', period: period});
+          result.push({ network: servers[server].network, server: servers[server].address, status: 'overload', period: period});
+        }
+      }
+
+      // ネットワーク毎に故障期間を取得
+      const networks = getNetwork(servers);
+      for (let network in networks) {
+        const periods = networks[network].getFaultPeriods(n);
+        for (let period of periods) {
+          result.push({ network: networks[network].address, server: '*', status: 'fault', period: period});
         }
       }
 
@@ -68,7 +78,7 @@ const DEFAULT_T = 100;
 /**
  * サーバのリストを作成
  * @param {array} data
- * @returns {array} サーバのリスト
+ * @returns {object} サーバのリスト
  */
 function getServers(data) {
   const servers = {};
@@ -83,4 +93,21 @@ function getServers(data) {
     servers[serverName].logs.push({ date: date, response: response});
   }
   return servers;
+}
+
+/**
+ *
+ * @param {object} servers サーバのリスト
+ * @returns {object} ネットワークのリスト
+ */
+function getNetwork(servers) {
+  const networks = {};
+  for (let server in servers) {
+    const network = servers[server].network;
+    if (!(network in networks)) {
+      networks[network] = new Network(network);
+    }
+    networks[network].servers.push(servers[server]);
+  }
+  return networks;
 }
